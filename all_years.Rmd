@@ -1,0 +1,529 @@
+---
+title: "All years"
+output: html_document
+params:
+  filename: NA
+---
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(readxl)
+library(DT)
+
+knitr::opts_chunk$set(echo = FALSE)
+
+all_data <- map(2 : 7, ~ rbind(read_excel(params$filename, 
+                                          sheet = ., skip = 1,
+                                          n_max = 31)))
+
+names(all_data) = paste0("Y", 1:6)
+
+list2env(all_data, envir = .GlobalEnv)
+
+process_data <- function(input_data, top_section_variables, middle_section_variables, bottom_section_variables){
+  
+  input_data <- input_data %>%
+    mutate_all(~ replace_na(.x, 0))
+  
+  input_data <- input_data %>% 
+    rowwise() %>% 
+    mutate(top = sum(across(all_of(top_section_variables))) / length(top_section_variables) / 3,
+           middle = sum(across(all_of(middle_section_variables))) / length(middle_section_variables) / 3,
+           bottom = sum(across(all_of(bottom_section_variables))) / length(bottom_section_variables) / 3 ,
+           all = (sum(across(all_of(top_section_variables))) +
+             sum(across(all_of(middle_section_variables))) +
+             sum(across(all_of(bottom_section_variables)))) / (length(top_section_variables) + length(middle_section_variables) + length(bottom_section_variables)) / 3)
+}
+
+```
+
+## R Markdown
+
+* Below- if it doesn't do any of this
+* Commencing- If a pupil gets at more than 50% of the total for the sheet they will be awarded at least commencing for that year group
+* Developing - If a pupil scores 60% or more of the total score they will be awarded at least developing
+* Secure - 100% from top section, and >50% from middle section inc middle green at 3
+* Advanced - 100% from top section, >75% from middle section and >50% from bottom section
+* Greater depth - 100% from top section >75% from middle section, >50% from bottom section inc green statement at 3
+
+Output- 
+
+* "Year 1 commencing", "Year 1 secure"...
+
+```{r, results = "asis"}
+
+if(nrow(Y1) > 0){
+  
+  cat("## Year 1")
+}
+
+```
+
+
+```{r, year1}
+
+if(nrow(Y1) > 0){
+  
+  names(Y1)[1] <- "child"
+
+top_section_variables <- c(
+  "I can name the letters of the alphabet in order", 
+  "I can write simple sentences spoken by my teacher", 
+  "I can talk about what I am going to write", 
+  "I can compose my sentence aloud before I write it", 
+  "I understand how words combine to make sentences", 
+  "I can write my ideas down, sentence by sentence to write a short narrative (3+ sentences)", 
+  "I can spell words using the phonemes I know", 
+  "I can spell some tricky roof words correctly in my writing (see list)", 
+  "I usually put a capital letter at the beginning and a full stop at the end of my sentence", 
+  "I use finger spaces to separate words", 
+  "I can check my writing makes sense by reading it through", 
+  "I can begin to write lower letters correctly")
+
+middle_section_variables <- c(
+  "I can use letter names to distinguish between different spellings of the same sound", 
+  "I can spell many roof words and all days of he week correctly", 
+  "I can add s and es to make a plural", 
+  "I can use the suffixes ing and ed", 
+  "I can use a capital letter for names and for I", 
+  "I can sit correctly at a table and hold my pencil correctly", 
+  "I can form capital letters and 0-9", 
+  "I can discuss what I have written and read it aloud audibly")
+
+bottom_section_variables <- c(
+  "I can write a short narrative (5+ sentences) that follows a suitable structure", 
+  "I can begin to use ? And ! In my writing", 
+  "I can spell most roof words correctly (up to card 21)", 
+  "I can use the prefix un- in my writing", 
+  "I can use the suffixes er and est in my writing", 
+  "I can use and to join 2 sentences")
+
+# fix missing variables
+
+Y1 <- process_data(Y1, top_section_variables, middle_section_variables, bottom_section_variables)
+# calculate scores
+
+# commencing - 38 from anywhere 50%
+# developing - 45 from anywhere 60%
+# secure - 33 from top section, and 13 from middle section
+# advanced - 33 from top section, 18 from middle section and 6 from bottom section
+# greater depth - 33 from top section 18 from middle section, 9 from bottom section inc green statement
+
+Y1 <- Y1 %>% 
+  mutate(stage = case_when(
+    top == 1 & middle >= .75 & bottom >= .5 & `I can write a short narrative (5+ sentences) that follows a suitable structure` == 3 ~ "f_deep",
+    top == 1 & middle >= .75 & bottom >= .5 ~ "e_advanced",
+    top == 1 & middle >= .5  ~ "d_secure",
+    all >= .6 ~ "c_developing",
+    all >= .5 ~ "b_commencing",
+    TRUE ~ "a_none"
+  ))
+
+Y1 %>% 
+  select(child, top, middle, bottom, 
+         `I can write a short narrative (5+ sentences) that follows a suitable structure`, 
+         all, stage) %>% 
+  set_names(c("Name", "Ready to progress", "Age-related expectations",
+              "Above age-related", "Greater depth required",
+              "Total score", "Assessment level")) %>% 
+  datatable(rownames = FALSE, extensions = 'Buttons', options = list(
+    pageLength = 100,
+    dom = 'Bfrtip',
+    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>% 
+  formatRound(c("Ready to progress", "Age-related expectations",
+                "Above age-related", "Greater depth required", "Total score"), 2)
+}
+
+```
+
+```{r, results = "asis"}
+
+if(nrow(Y2) > 0){
+  
+  cat("## Year 2")
+}
+
+```
+
+```{r, year2}
+
+if(nrow(Y2) > 0){
+  
+  names(Y2)[1] <- "child"
+  
+  top_section_variables2 <- c("Write simple, coherent narratives about personal experiences and those of others", 
+                              "Write about real events, recording these simply and clearly.", 
+                              "Demarcate most sentences in their writing with capital letters and full stops", 
+                              "Use present and past tense mostly correctly and consistently.", 
+                              "Use co-ordination (e.g. or / and / but) to join clauses.", 
+                              "I can use a range of suffixes appropriately: -s, -es, -er, -ed, -ing", 
+                              "segment spoken words into phonems and represent these with graphemes (some correct spellings, some phonetically plausible)")
+  
+  middle_section_variables2 <- c("Use some subordination (e.g. when / if / that / because) to join clauses.", 
+                                 "Use question marks correctly when appropriate", 
+                                 "segment spoken words into phonems and represent these with graphemes (many correct spellings, some phonetically plausible)", 
+                                 "Spell many common exception words (Y2 spelling list – up to card 30)", 
+                                 "form capital letters and digits of he correct size, orientation and relationship to each other and lowercase", 
+                                 "Use spacing between words that reflects the size of the letters.")
+  
+  bottom_section_variables2 <- c("Write effectively and coherently for different purposes.", 
+                                 "Draw on their reading to inform the vocabulary and grammar of their writing.", 
+                                 "Make simple additions, revisions and proof-reading corrections to their own writing.", 
+                                 "Use punctuation taught at key stage 1 mostly correctly", 
+                                 "Spell most common exception words.", 
+                                 "add suffixes to spell most words  correctly in their writing (ment, ness, ful, ly)", 
+                                 "Use the diagonal and horizontal strokes needed to join some letters.")
+  
+  # fix missing variables
+  
+  Y2 <- process_data(Y2, top_section_variables2, middle_section_variables2, bottom_section_variables2)
+  
+  Y2 <- Y2 %>% 
+    mutate(stage = case_when(
+      top == 1 & middle >= .75 & bottom >= .5 & `Write effectively and coherently for different purposes.` == 3 ~ "f_deep",
+      top == 1 & middle >= .75 & bottom >= .5 ~ "e_advanced",
+      top == 1 & middle >= .5  ~ "d_secure",
+      all >= .6 ~ "c_developing",
+      all >= .5 ~ "b_commencing",
+      TRUE ~ "a_none"
+    ))
+  
+  Y2 %>% 
+    select(child, top, middle, bottom, 
+           `Write effectively and coherently for different purposes.`, 
+           all, stage) %>% 
+    set_names(c("Name", "Ready to progress", "Age-related expectations",
+                "Above age-related", "Greater depth required",
+                "Total score", "Assessment level")) %>% 
+    datatable(rownames = FALSE, extensions = 'Buttons', options = list(
+      pageLength = 100,
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+    )) %>% 
+    formatRound(c("Ready to progress", "Age-related expectations",
+                  "Above age-related", "Greater depth required", "Total score"), 2)
+  
+}
+
+```
+
+```{r, results = "asis"}
+
+if(nrow(Y3) > 0){
+  
+  cat("## Year 3")
+}
+
+```
+
+
+```{r, year3}
+
+if(nrow(Y3) > 0){
+  
+  names(Y3)[1] <- "child"
+  
+  top_section_variables3 <- c("Write for different purposes using text and grammar features expected in narrative and factual pieces", 
+                              "Use a range of sentence types which are mostly punctuated correctly with capital letter, full stop, exclamation mark or question mark", 
+                              "Use co-ordinating conjunctions to combine 2 main clauses - FANBOYS.", 
+                              "Use some subordination (e.g. when / if / that / because) to join clauses", 
+                              "Proof-read my work for simple errors.", "Use the horizontal and diagonal strokes needed to join some letters.", 
+                              "Spell a few homophones and most Y2 common exception words accurately (roof words up to card 30)", 
+                              "Use simple organisational devices and organise paragraphs around a theme.", 
+                              "Use adverbs of time, place and cause e.g. then, next, soon, therefore")
+  
+  middle_section_variables3 <- c("Write coherently and effectively for different purposes including narrative and factual pieces and my wriing contains interesting details", 
+                                 "Use correct punctuation in all my writing, e.g. commas in a list, apostrophes for contraction and possession, beginning to use inverted commas for direct speech **", 
+                                 "Use prepositions to express time, place and cause e.g. before, after, during, in, because, of.", 
+                                 "Use conjunctions to express time and cause e.g. when, before, after, while, so and because", 
+                                 "Spell some homophones and many Y3 common exception words accurately.", 
+                                 "Use a range of pre-fixes and suffixes e.g.: dis, mis, un, de, and –ly, -ment, -ness, -ful, -less.", 
+                                 "Proof-read my work for punctuation and spelling errors.", "Use diagonal and horizontal strokes to join letters and my writing is spaced sufficiently to aid legibility"
+  )
+  
+  bottom_section_variables3 <- c("Write coherently and effectively in a range of genres. My pieces include a variety of genre specific vocab which adds interest to the reader", 
+                                 "Successfully create settings, characters and plots in narrative writing ensuring it follows a sequence", 
+                                 "Use the present perfect form of verbs instead of simple past tense.", 
+                                 "Use a or an depending on if a word starts with a consonant or vowel.", 
+                                 "Use inverted commas accurately e.g. The conductor shouted, “Sit down!”", 
+                                 "Proof-read my work for simple grammatical errors and check that my writing makes sense.", 
+                                 "Spell many homophones and common exception words from the Y3/4 list accurately", 
+                                 "Write ascenders and descenders are equidistant and parallel."
+  )
+  
+  # fix missing variables
+  
+  Y3 <- process_data(Y3, top_section_variables3, middle_section_variables3, bottom_section_variables3)
+  # calculate scores
+  
+  # commencing - 38 from anywhere 50%
+  # developing - 45 from anywhere 60%
+  # secure - 33 from top section, and 13 from middle section
+  # advanced - 33 from top section, 18 from middle section and 6 from bottom section
+  # greater depth - 33 from top section 18 from middle section, 9 from bottom section inc green statement
+  
+  Y3 <- Y3 %>% 
+    mutate(stage = case_when(
+      top == 1 & middle >= .75 & bottom >= .5 & `Write coherently and effectively in a range of genres. My pieces include a variety of genre specific vocab which adds interest to the reader` == 3 &
+        `Use correct punctuation in all my writing, e.g. commas in a list, apostrophes for contraction and possession, beginning to use inverted commas for direct speech **` == 3 ~ "f_deep",
+      top == 1 & middle >= .75 & bottom >= .5 ~ "e_advanced",
+      top == 1 & middle >= .5  ~ "d_secure",
+      all >= .6 ~ "c_developing",
+      all >= .5 ~ "b_commencing",
+      TRUE ~ "a_none"
+    ))
+  
+  Y3 %>% 
+    select(child, top, middle, bottom, 
+           `Write coherently and effectively in a range of genres. My pieces include a variety of genre specific vocab which adds interest to the reader`,
+           `Use correct punctuation in all my writing, e.g. commas in a list, apostrophes for contraction and possession, beginning to use inverted commas for direct speech **`, 
+           all, stage) %>% 
+    set_names(c("Name", "Ready to progress", "Age-related expectations",
+                "Above age-related", "Greater depth required", "Greater depth required_2", 
+                "Total score", "Assessment level")) %>% 
+    datatable(rownames = FALSE, extensions = 'Buttons', options = list(
+      pageLength = 100,
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+    )) %>% 
+    formatRound(c("Ready to progress", "Age-related expectations",
+                  "Above age-related", "Greater depth required", "Total score"), 2)
+}
+
+```
+
+```{r, results = "asis"}
+
+if(nrow(Y4) > 0){
+  
+  cat("## Year 4")
+}
+
+```
+
+
+```{r, year4}
+
+if(nrow(Y4) > 0){
+  
+  names(Y4)[1] <- "child"
+  
+  top_section_variables4 <- c("I can use fronted adverbials with commas", "I can use inverted commas and other punctuation to indicate direct speech", 
+                              "I can extend my sentences to more than one clause using a wider range of conjunctions including: when, if, because and although", 
+                              "I can expand my noun phrases by adding adjectives and preposition phrases to the noun", 
+                              "I can consistently use the correct tense", "I can use nouns and pronouns to avoid repetition.", 
+                              "I can use paragraphs to organise my ideas around a theme**", 
+                              "I can make my writing engaging and fluent so that the reader wants to read on", 
+                              "I can spell words using the rules taught in Year 2", "I can join my handwriting in a consistent and legible style")
+  
+  middle_section_variables4 <- c("I can tell the difference between a plural s and a possessive s", 
+                                 "I use the correct verb inflection – we were, I did", "I can use a range of determiners", 
+                                 "I can write narratives with a clear beginning, middle and end", 
+                                 "I can use a range of organisational devices in non-fiction writing; e.g sub-headings and bullet points**", 
+                                 "I can plan by discussing writing that is similar to the piece I want to write", 
+                                 "I can develop descriptions of characters, settings and emotions**", 
+                                 "I can use adjectives and adverbs when writing descriptions", 
+                                 "I can proofread confidently and amend my own and others’ spellings, grammar and punctuation.", 
+                                 "I can suggest improvements in my own and others’ writing so that there is a better effect on the reader.", 
+                                 "I can spell words using the rules taught in Year 3 and 4")
+  
+  bottom_section_variables4 <- c("I can consistently use possessive apostrophes correctly", "I can use conjunctions and adverbs to express time and cause", 
+                                 "I can use rich and varied vocabulary", "I can begin to include my opinions, interests and humour to engage the reader in a range of genres", 
+                                 "I can spell all/ almost all of the words correctly from the Y3 and 4 statutory spelling list**")
+  
+  # fix missing variables
+  
+  Y4 <- process_data(Y4, top_section_variables4, middle_section_variables4, bottom_section_variables4)
+  # calculate scores
+  
+  # commencing - 38 from anywhere 50%
+  # developing - 45 from anywhere 60%
+  # secure - 33 from top section, and 13 from middle section
+  # advanced - 33 from top section, 18 from middle section and 6 from bottom section
+  # greater depth - 33 from top section 18 from middle section, 9 from bottom section inc green statement
+  
+  Y4 <- Y4 %>% 
+    mutate(stage = case_when(
+      top == 1 & middle >= .75 & bottom >= .5 & `I can begin to include my opinions, interests and humour to engage the reader in a range of genres` == 3 ~ "f_deep",
+      top == 1 & middle >= .75 & bottom >= .5 ~ "e_advanced",
+      top == 1 & middle >= .5  ~ "d_secure",
+      all >= .6 ~ "c_developing",
+      all >= .5 ~ "b_commencing",
+      TRUE ~ "a_none"
+    ))
+  
+  Y4 %>% 
+    select(child, top, middle, bottom, 
+           `I can begin to include my opinions, interests and humour to engage the reader in a range of genres`,
+           all, stage) %>% 
+    set_names(c("Name", "Ready to progress", "Age-related expectations",
+                "Above age-related", "Greater depth required", 
+                "Total score", "Assessment level")) %>% 
+    datatable(rownames = FALSE, extensions = 'Buttons', options = list(
+      pageLength = 100,
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+    )) %>% 
+    formatRound(c("Ready to progress", "Age-related expectations",
+                  "Above age-related", "Greater depth required", "Total score"), 2)
+}
+
+```
+
+
+```{r, results = "asis"}
+
+if(nrow(Y5) > 0){
+  
+  cat("## Year 5")
+}
+
+```
+
+```{r, year5}
+
+if(nrow(Y5) > 0){
+  
+  names(Y5)[1] <- "child"
+  
+  top_section_variables5 <- c("I can use a range of punctuation in all my writing; e.g apostrophes, inverted commas, comma, exclamation marks and question marks**", 
+                              "I can write multi-clause sentences using commas to separate clauses", 
+                              "I can write using the correct tense", "I can use paragraphs to organise my ideas in fiction and non-fiction**", 
+                              "I can plan my writing with a clear structure, purpose and audience.", 
+                              "I can write descriptions of settings, characters and atmosphere that use a range of devices**", 
+                              "I can spell words using the rules taught in Year 5", "I can join my handwriting in a clear and legible style")
+  
+  middle_section_variables5 <- c("I can use expanded noun phrases.", "I can use adverbs.", 
+                                 "I can use a variety of co-ordinating and subordinating conjunctions.", 
+                                 "I can develop my ideas by drawing on prior reading and research.", 
+                                 "I can write narratives with a clear opening, build up, problem, resolution and ending.", 
+                                 "I can use a range of organisational and presentational devices in non-fiction writing, e.g. sub-headings and bullet points**", 
+                                 "I can write with different levels of formality depending on the text type.", 
+                                 "I can proofread confidently and amend my own and others’ spellings, grammar and punctuation and suggest improvements.",
+                                 "I can publish my work to a high standard, including using ICT.", 
+                                 "I can spell words using the rules taught in year three and four.")
+  
+  bottom_section_variables5 <- c("I can use brackets, dashes and commas to show parenthesis.", 
+                                 "I can write relative clauses beginning with relative pronouns.", 
+                                 "I can use modal verbs to show possibility", "I can use cohesive devices within paragraphs and across paragraphs", 
+                                 "I can include my opinions, interests and humour in my writing", 
+                                 "I can use techniques to develop the readers’ interest, e.g. building tension, metaphors, similes, rhetorical questions in a range of genres", 
+                                 "I can use dialogue to show what a character is like and to show their actions.", 
+                                 "I can spell most of the words correctly from the Y5 statutory spelling list")
+  
+  # fix missing variables
+  
+  Y5 <- process_data(Y5, top_section_variables5, middle_section_variables5, bottom_section_variables5)
+  
+  # commencing - 38 from anywhere 50%
+  # developing - 45 from anywhere 60%
+  # secure - 33 from top section, and 13 from middle section
+  # advanced - 33 from top section, 18 from middle section and 6 from bottom section
+  # greater depth - 33 from top section 18 from middle section, 9 from bottom section inc green statement
+  
+  Y5 <- Y5 %>% 
+    mutate(stage = case_when(
+      top == 1 & middle >= .75 & bottom >= .5 & `I can use techniques to develop the readers’ interest, e.g. building tension, metaphors, similes, rhetorical questions in a range of genres` == 3 ~ "f_deep",
+      top == 1 & middle >= .75 & bottom >= .5 ~ "e_advanced",
+      top == 1 & middle >= .5  ~ "d_secure",
+      all >= .6 ~ "c_developing",
+      all >= .5 ~ "b_commencing",
+      TRUE ~ "a_none"
+    ))
+  
+  Y5 %>% 
+    select(child, top, middle, bottom, 
+           `I can use techniques to develop the readers’ interest, e.g. building tension, metaphors, similes, rhetorical questions in a range of genres`, 
+           all, stage) %>% 
+    set_names(c("Name", "Ready to progress", "Age-related expectations",
+                "Above age-related", "Greater depth required",
+                "Total score", "Assessment level")) %>% 
+    datatable(rownames = FALSE, extensions = 'Buttons', options = list(
+      pageLength = 100,
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+    )) %>% 
+    formatRound(c("Ready to progress", "Age-related expectations",
+                  "Above age-related", "Greater depth required", "Total score"), 2)
+}
+
+```
+
+```{r, results = "asis"}
+
+if(nrow(Y6) > 0){
+  
+  cat("## Year 6")
+}
+
+```
+
+```{r, year6}
+
+if(nrow(Y6) > 0){
+  
+  names(Y6)[1] <- "child"
+  
+  top_section_variables6 <- c("Use correct punctuation in all my writing, e.g. commas in a list, apostrophes for contraction and possession, beginning to use inverted commas for direct speech **", 
+                              "I can use paragraphs to organise my ideas around a theme**", 
+                              "I can use a range of organisational devices in non-fiction writing; e.g sub-headings and bullet points**", 
+                              "I can develop descriptions of characters, settings and emotions**", 
+                              "I can spell all/ almost all of the words correctly from the Y3 and 4 statutory spelling list**", 
+                              "I can use paragraphs to organise my ideas in fiction and non-fiction**", 
+                              "I can write descriptions of settings, characters and atmosphere that use a range of devices**")
+  
+  middle_section_variables6 <- c("I can select vocabulary and grammatical structures that reflect what the writing requires, doing this mostly appropriately", 
+                                 "I can use verb tenses consistently and correctly throughout my writing", 
+                                 "I can use the range of punctuation taught at key stage 2 mostly correctly", 
+                                 "I can write effectively for a range of purposes and audiences, selecting language that shows good awareness of the reader", 
+                                 "I can use a range of devices to build cohesion within and across paragraphs", 
+                                 "I can describe settings, characters and atmosphere in narratives", 
+                                 "I can integrate dialogue in narratives to convey character and advance the action", 
+                                 "I can spell correctly most words from the year 5/ year 6 spelling list", 
+                                 "I can maintain legibility in joined handwriting when writing at speed")
+  
+  bottom_section_variables6 <- c("I can use the range of punctuation taught at key stage 2 and, when necessary, use the punctuation precisely to enhance meaning and avoid ambiguity", 
+                                 "I can write effectively for a range of purposes and audiences, selecting the appropriate form and drawing independently on what I have read as models for my own writing", 
+                                 "I can exercise an assured and conscious control over levels of formality, particularly through manipulating grammar and vocabulary to achieve this", 
+                                 "I can distinguish between the language of speech and writing and choose the appropriate register")
+  
+  # fix missing variables
+  
+  Y6 <- process_data(Y6, top_section_variables6, middle_section_variables6, bottom_section_variables6)
+  
+  # commencing - 38 from anywhere 50%
+  # developing - 45 from anywhere 60%
+  # secure - 33 from top section, and 13 from middle section
+  # advanced - 33 from top section, 18 from middle section and 6 from bottom section
+  # greater depth - 33 from top section 18 from middle section, 9 from bottom section inc green statement
+  
+  Y6 <- Y6 %>% 
+    mutate(stage = case_when(
+      top == 1 & middle >= .75 & bottom >= .5 & `I can write effectively for a range of purposes and audiences, selecting the appropriate form and drawing independently on what I have read as models for my own writing` == 3 ~ "f_deep",
+      top == 1 & middle >= .75 & bottom >= .5 ~ "e_advanced",
+      top == 1 & middle >= .5  ~ "d_secure",
+      all >= .6 ~ "c_developing",
+      all >= .5 ~ "b_commencing",
+      TRUE ~ "a_none"
+    ))
+  
+  Y6 %>% 
+    select(child, top, middle, bottom, 
+           `I can write effectively for a range of purposes and audiences, selecting the appropriate form and drawing independently on what I have read as models for my own writing`, 
+           all, stage) %>% 
+    set_names(c("Name", "Ready to progress", "Age-related expectations",
+                "Above age-related", "Greater depth required",
+                "Total score", "Assessment level")) %>% 
+    datatable(rownames = FALSE, extensions = 'Buttons', options = list(
+      pageLength = 100,
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+    )) %>% 
+    formatRound(c("Ready to progress", "Age-related expectations",
+                  "Above age-related", "Greater depth required", "Total score"), 2)
+}
+
+```
+
